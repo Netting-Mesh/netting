@@ -1,21 +1,13 @@
-mod proto;
-use proto::msg::Message;
+mod k8;
+use k8::pod::get_pods;
+use k8::svc::get_svcs;
+use kube::Client;
 
-fn main() {
-    let name = String::from("test");
-    let msg = build_message(name);
-    println!("{:?}", msg);
-}
-
-fn build_message(name: String) -> Message {
-    let mut msg = Message::new();
-    msg.set_body(name);
-    msg
-}
-
-#[test]
-fn build_message_test() {
-    let name = String::from("test");
-    let msg = build_message(name.clone());
-    assert_eq!(msg.get_body(), name);
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = Client::try_default().await?;
+    let namespace = std::env::var("NAMESPACE").unwrap_or("kube-system".into());
+    //get_pods(client, namespace).await?;
+    get_svcs(client, namespace).await?;
+    Ok(())
 }

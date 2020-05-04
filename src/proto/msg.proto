@@ -1,5 +1,15 @@
 syntax = "proto3";
 
-message Message {
-    string body = 1;
+message InitSystem {
+    enum SenderType {
+        NET = 0;
+        BOAT = 1;
+    }
+    message SideBoat {
+        string ip_address = 1;
+        string namespace = 2;
+    }
+    SenderType type = 1;
+    string ip_address = 2;
+    repeated SideBoat side_boats = 3; 
 }
