@@ -9,5 +9,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let namespace = std::env::var("NAMESPACE").unwrap_or("kube-system".into());
     //get_pods(client, namespace).await?;
     get_svcs(client, namespace).await?;
+    loop {}
     Ok(())
 }
