@@ -13,3 +13,7 @@ message InitSystem {
     string ip_address = 2;
     repeated SideBoat side_boats = 3; 
 }
+
+service Talker {
+    rpc Talk(InitSystem) returns (InitSystem) {}
+}

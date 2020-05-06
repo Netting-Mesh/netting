@@ -14,4 +14,4 @@ Cargo.lock
 
 /target
 
-src/proto/*.rs
+src/protos/*.rs

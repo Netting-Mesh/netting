@@ -1,15 +1,8 @@
-extern crate protoc_rust;
-
-use protoc_rust::Customize;
+extern crate protoc_grpcio;
 
 fn main() {
-	protoc_rust::run(protoc_rust::Args {
-		out_dir: "src/proto",
-		input: &["src/proto/msg.proto"],
-		includes: &["src/proto"],
-		customize: Customize {
-			..Default::default()
-		},
-	})
-	.expect("protoc");
+    let proto_root = "src/protos";
+    println!("cargo:rerun-if-changed={}", proto_root);
+    protoc_grpcio::compile_grpc_protos(&["msg/msg.proto"], &[proto_root], &proto_root, None)
+        .expect("Failed to compile gRPC definitions!");
 }
