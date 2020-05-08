@@ -7,4 +7,4 @@ metadata:
 spec:
   containers:
   - name: netting 
-    image: netting:test-5 
+    image: netting:latest
