@@ -1,8 +1,8 @@
-FROM rustlang/rust:nightly-alpine as builder
+FROM rustlang/rust:nightly as builder
 
-RUN apk add libressl-dev
-RUN apk add musl-dev
-RUN apk add protobuf
+RUN apt-get update\
+    && yes yes | apt-get install cmake \
+    && yes yes | apt-get install protobuf-compiler
 
 RUN USER=root cargo new --bin netting-builder 
 
@@ -26,6 +26,9 @@ RUN cargo build --release
 RUN strip /netting-builder/target/release/netting
 
 FROM debian:stable-slim
+
+RUN apt-get update\
+	&& yes yes | apt-get install openssl
 
 WORKDIR /netting
 
