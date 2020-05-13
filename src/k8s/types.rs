@@ -2,7 +2,6 @@
 pub struct NettingContainer {
     pub image: String,
     pub ports: Vec<i32>,
-    pub running: bool,
 }
 
 #[derive(Debug)]

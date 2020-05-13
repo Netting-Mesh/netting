@@ -18,7 +18,6 @@ pub async fn get_container_details(container: Container) -> NettingContainer {
     return NettingContainer {
         image: container.image.unwrap(),
         ports: ports,
-        running: false,
     };
 }
 
