@@ -7,8 +7,13 @@ use kube::{
 
 pub async fn get_container_details(container: Container) -> NettingContainer {
     let mut ports = Vec::new();
-    for cp in container.ports.unwrap() {
-        ports.push(cp.container_port);
+    match container.ports {
+        Some(container_ports) => {
+            for cp in container_ports {
+                ports.push(cp.container_port);
+            }
+        }
+        None => {}
     }
     return NettingContainer {
         image: container.image.unwrap(),

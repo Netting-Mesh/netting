@@ -1,5 +1,3 @@
-use std::{error, fmt};
-
 #[derive(Debug)]
 pub struct NettingContainer {
     pub image: String,
