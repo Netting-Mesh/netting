@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{error, fmt};
 
 #[derive(Debug)]
 pub struct NettingContainer {
@@ -29,13 +29,13 @@ pub struct NettingReplicaSet {
 pub struct NettingDeployment {
     pub name: String,
     pub namespace: String,
-    pub replicasets: Vec<NettingReplicaSet>,
+    pub replica_sets: Vec<NettingReplicaSet>,
 }
 
 #[derive(Debug)]
 pub struct NettingService {
     pub name: String,
     pub namespace: String,
-    pub clusterIp: String,
-    pub podsExposed: Vec<NettingPod>,
+    pub cluster_ip: String,
+    pub pods_exposed: Vec<NettingPod>,
 }

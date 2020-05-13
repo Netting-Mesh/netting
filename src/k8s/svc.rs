@@ -2,7 +2,7 @@ use crate::k8s::pod::{get_pod_details, get_pod_list};
 use crate::k8s::types::*;
 use k8s_openapi::api::core::v1::Service;
 use kube::{
-    api::{Api, ListParams, Meta},
+    api::{Api, ListParams},
     Client,
 };
 
@@ -16,7 +16,7 @@ pub async fn get_svc_list(client: Client, namespace: String) -> Result<Vec<Servi
     Ok(ret)
 }
 
-pub async fn get_svc_details(svc: Service, client: Client) -> NettingService {
+pub async fn get_svc_details(svc: Service, client: Client) -> Result<NettingService, &'static str> {
     let mut labels = String::new();
     match svc.spec.clone().unwrap().selector {
         Some(_) => {
@@ -25,7 +25,7 @@ pub async fn get_svc_details(svc: Service, client: Client) -> NettingService {
             }
             labels.pop();
         }
-        None => {}
+        None => return Err("No labels found in service, doesn't expose anything"),
     }
     let pods = get_pod_list(
         client,
@@ -33,14 +33,14 @@ pub async fn get_svc_details(svc: Service, client: Client) -> NettingService {
         labels,
     )
     .await;
-    let mut nettingPods = Vec::new();
+    let mut netting_pods = Vec::new();
     for pod in pods.unwrap() {
-        nettingPods.push(get_pod_details(pod).await);
+        netting_pods.push(get_pod_details(pod).await);
     }
-    return NettingService {
+    Ok(NettingService {
         name: svc.metadata.clone().unwrap().name.unwrap(),
         namespace: svc.metadata.clone().unwrap().namespace.unwrap(),
-        clusterIp: svc.spec.unwrap().cluster_ip.unwrap(),
-        podsExposed: nettingPods,
-    };
+        cluster_ip: svc.spec.unwrap().cluster_ip.unwrap(),
+        pods_exposed: netting_pods,
+    })
 }

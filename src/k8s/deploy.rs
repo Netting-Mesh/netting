@@ -45,15 +45,15 @@ pub async fn get_replicaset_details(replicaset: ReplicaSet, client: Client) -> N
         labels,
     )
     .await;
-    let mut nettingPods = Vec::new();
+    let mut netting_pods = Vec::new();
     for pod in pods.unwrap() {
-        nettingPods.push(get_pod_details(pod).await);
+        netting_pods.push(get_pod_details(pod).await);
     }
     return NettingReplicaSet {
         name: replicaset.metadata.clone().unwrap().name.unwrap(),
         namespace: replicaset.metadata.unwrap().namespace.unwrap(),
         deployment: "".to_owned(),
-        pods: nettingPods,
+        pods: netting_pods,
     };
 }
 
@@ -69,13 +69,13 @@ pub async fn get_deployment_details(deploy: Deployment, client: Client) -> Netti
         labels,
     )
     .await;
-    let mut nettingReplicaSets = Vec::new();
+    let mut netting_replica_sets = Vec::new();
     for rs in replicasets.unwrap() {
-        nettingReplicaSets.push(get_replicaset_details(rs, client.clone()).await);
+        netting_replica_sets.push(get_replicaset_details(rs, client.clone()).await);
     }
     return NettingDeployment {
         name: deploy.metadata.clone().unwrap().name.unwrap(),
         namespace: deploy.metadata.clone().unwrap().namespace.unwrap(),
-        replicasets: nettingReplicaSets,
+        replica_sets: netting_replica_sets,
     };
 }
