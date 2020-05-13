@@ -15,18 +15,29 @@ pub struct Catalogue {
 }
 
 impl Catalogue {
-    pub async fn new(client: Client) -> Self {
-        let namespaces = get_namespaces(client.clone()).await.unwrap();
-        return Catalogue {
-            pod_catalogue: Catalogue::build_pod_catalogue(client.clone(), namespaces.clone()).await,
-            deploy_catalogue: Catalogue::build_deploy_catalogue(client.clone(), namespaces.clone())
-                .await,
-            service_catalogue: Catalogue::build_svc_catalogue(client.clone(), namespaces.clone())
-                .await,
-            namespaces: namespaces,
-        };
+    pub async fn new() -> Self {
+        Catalogue {
+            pod_catalogue: HashMap::default(),
+            deploy_catalogue: HashMap::default(),
+            service_catalogue: HashMap::default(),
+            namespaces: Vec::default(),
+        }
     }
-    pub async fn build_pod_catalogue(
+    pub async fn build_catalogue(&mut self, client: Client) {
+        let namespaces = get_namespaces(client.clone()).await.unwrap();
+        self.pod_catalogue = self
+            .build_pod_catalogue(client.clone(), namespaces.clone())
+            .await;
+        self.deploy_catalogue = self
+            .build_deploy_catalogue(client.clone(), namespaces.clone())
+            .await;
+        self.service_catalogue = self
+            .build_svc_catalogue(client.clone(), namespaces.clone())
+            .await;
+        self.namespaces = namespaces;
+    }
+    async fn build_pod_catalogue(
+        &mut self,
         client: Client,
         namespaces: Vec<String>,
     ) -> HashMap<String, Vec<NettingPod>> {
@@ -34,7 +45,7 @@ impl Catalogue {
         for namespace in namespaces {
             let pods = get_pod_list(client.clone(), namespace.clone(), "".to_owned()).await;
             for pod in pods.unwrap() {
-                let netting_pod = get_pod_details(pod).await;
+                let netting_pod = get_pod_details(pod, false).await;
                 match pod_catalogue.get_mut(&(namespace.clone())) {
                     Some(pods) => {
                         pods.push(netting_pod);
@@ -47,7 +58,8 @@ impl Catalogue {
         }
         pod_catalogue
     }
-    pub async fn build_deploy_catalogue(
+    async fn build_deploy_catalogue(
+        &mut self,
         client: Client,
         namespaces: Vec<String>,
     ) -> HashMap<String, Vec<NettingDeployment>> {
@@ -68,7 +80,20 @@ impl Catalogue {
         }
         deploy_catalogue
     }
-    pub async fn build_svc_catalogue(
+    async fn update_pod(&mut self, namespace: String, pod: NettingPod) {
+        match self.pod_catalogue.get_mut(&namespace) {
+            Some(pods) => {
+                for p in pods {
+                    if pod.name == p.name {
+                        p.exposed = true;
+                    }
+                }
+            }
+            None => {}
+        }
+    }
+    async fn build_svc_catalogue(
+        &mut self,
         client: Client,
         namespaces: Vec<String>,
     ) -> HashMap<String, Vec<NettingService>> {
@@ -79,10 +104,16 @@ impl Catalogue {
                 match get_svc_details(svc, client.clone()).await {
                     Ok(netting_service) => match svc_catalogue.get_mut(&(namespace.clone())) {
                         Some(services) => {
-                            services.push(netting_service);
+                            services.push(netting_service.clone());
+                            for pod in netting_service.pods_exposed {
+                                self.update_pod(namespace.clone(), pod).await;
+                            }
                         }
                         None => {
-                            svc_catalogue.insert(namespace.clone(), vec![netting_service]);
+                            svc_catalogue.insert(namespace.clone(), vec![netting_service.clone()]);
+                            for pod in netting_service.pods_exposed {
+                                self.update_pod(namespace.clone(), pod).await;
+                            }
                         }
                     },
                     Err(_) => {}

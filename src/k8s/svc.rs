@@ -35,7 +35,7 @@ pub async fn get_svc_details(svc: Service, client: Client) -> Result<NettingServ
     .await;
     let mut netting_pods = Vec::new();
     for pod in pods.unwrap() {
-        netting_pods.push(get_pod_details(pod).await);
+        netting_pods.push(get_pod_details(pod, true).await);
     }
     Ok(NettingService {
         name: svc.metadata.clone().unwrap().name.unwrap(),

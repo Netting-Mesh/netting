@@ -1,10 +1,10 @@
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct NettingContainer {
     pub image: String,
     pub ports: Vec<i32>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct NettingPod {
     pub name: String,
     pub namespace: String,
@@ -14,7 +14,7 @@ pub struct NettingPod {
     pub exposed: bool,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct NettingReplicaSet {
     pub name: String,
     pub namespace: String,
@@ -22,14 +22,14 @@ pub struct NettingReplicaSet {
     pub pods: Vec<NettingPod>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct NettingDeployment {
     pub name: String,
     pub namespace: String,
     pub replica_sets: Vec<NettingReplicaSet>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct NettingService {
     pub name: String,
     pub namespace: String,

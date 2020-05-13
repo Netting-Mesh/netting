@@ -25,7 +25,7 @@ pub async fn get_container_status(status: ContainerStatus) -> bool {
     return status.ready;
 }
 
-pub async fn get_pod_details(pod: Pod) -> NettingPod {
+pub async fn get_pod_details(pod: Pod, exposed: bool) -> NettingPod {
     let mut containers = Vec::new();
     for container in pod.spec.unwrap().containers {
         containers.push(get_container_details(container).await);
@@ -42,7 +42,7 @@ pub async fn get_pod_details(pod: Pod) -> NettingPod {
         replicaset: "".to_owned(),
         containers: containers,
         status: status,
-        exposed: false,
+        exposed: exposed,
     };
 }
 

@@ -47,7 +47,7 @@ pub async fn get_replicaset_details(replicaset: ReplicaSet, client: Client) -> N
     .await;
     let mut netting_pods = Vec::new();
     for pod in pods.unwrap() {
-        netting_pods.push(get_pod_details(pod).await);
+        netting_pods.push(get_pod_details(pod, false).await);
     }
     return NettingReplicaSet {
         name: replicaset.metadata.clone().unwrap().name.unwrap(),
