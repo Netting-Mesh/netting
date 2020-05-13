@@ -1,5 +1,7 @@
+use crate::k8s::deploy::{get_deployment_details, get_deployment_list};
 use crate::k8s::namespace::get_namespaces;
 use crate::k8s::pod::{get_pod_details, get_pod_list};
+use crate::k8s::svc::{get_svc_details, get_svc_list};
 use crate::k8s::types::*;
 use kube::Client;
 use std::collections::HashMap;
@@ -7,8 +9,8 @@ use std::collections::HashMap;
 #[derive(Debug, Default)]
 pub struct Catalogue {
     pub pod_catalogue: HashMap<String, Vec<NettingPod>>,
-    //pub deploy_catalogue: HashMap<String, Vec<NettingDeployment>>,
-    //pub service_catalogue: HashMap<String, Vec<NettingService>>,
+    pub deploy_catalogue: HashMap<String, Vec<NettingDeployment>>,
+    pub service_catalogue: HashMap<String, Vec<NettingService>>,
     pub namespaces: Vec<String>,
 }
 
@@ -16,7 +18,11 @@ impl Catalogue {
     pub async fn new(client: Client) -> Self {
         let namespaces = get_namespaces(client.clone()).await.unwrap();
         return Catalogue {
-            pod_catalogue: Catalogue::build_pod_catalogue(client, namespaces.clone()).await,
+            pod_catalogue: Catalogue::build_pod_catalogue(client.clone(), namespaces.clone()).await,
+            deploy_catalogue: Catalogue::build_deploy_catalogue(client.clone(), namespaces.clone())
+                .await,
+            service_catalogue: Catalogue::build_svc_catalogue(client.clone(), namespaces.clone())
+                .await,
             namespaces: namespaces,
         };
     }
@@ -28,18 +34,61 @@ impl Catalogue {
         for namespace in namespaces {
             let pods = get_pod_list(client.clone(), namespace.clone(), "".to_owned()).await;
             for pod in pods.unwrap() {
-                let ns = namespace.clone();
                 let netting_pod = get_pod_details(pod).await;
-                match pod_catalogue.get_mut(&ns) {
+                match pod_catalogue.get_mut(&(namespace.clone())) {
                     Some(pods) => {
                         pods.push(netting_pod);
                     }
                     None => {
-                        pod_catalogue.insert(ns, vec![netting_pod]);
+                        pod_catalogue.insert(namespace.clone(), vec![netting_pod]);
                     }
                 }
             }
         }
         pod_catalogue
+    }
+    pub async fn build_deploy_catalogue(
+        client: Client,
+        namespaces: Vec<String>,
+    ) -> HashMap<String, Vec<NettingDeployment>> {
+        let mut deploy_catalogue: HashMap<String, Vec<NettingDeployment>> = HashMap::new();
+        for namespace in namespaces {
+            let deployments = get_deployment_list(client.clone(), namespace.clone()).await;
+            for deploy in deployments.unwrap() {
+                let netting_deploy = get_deployment_details(deploy, client.clone()).await;
+                match deploy_catalogue.get_mut(&(namespace.clone())) {
+                    Some(deployments) => {
+                        deployments.push(netting_deploy);
+                    }
+                    None => {
+                        deploy_catalogue.insert(namespace.clone(), vec![netting_deploy]);
+                    }
+                }
+            }
+        }
+        deploy_catalogue
+    }
+    pub async fn build_svc_catalogue(
+        client: Client,
+        namespaces: Vec<String>,
+    ) -> HashMap<String, Vec<NettingService>> {
+        let mut svc_catalogue: HashMap<String, Vec<NettingService>> = HashMap::new();
+        for namespace in namespaces {
+            let services = get_svc_list(client.clone(), namespace.clone()).await;
+            for svc in services.unwrap() {
+                match get_svc_details(svc, client.clone()).await {
+                    Ok(netting_service) => match svc_catalogue.get_mut(&(namespace.clone())) {
+                        Some(services) => {
+                            services.push(netting_service);
+                        }
+                        None => {
+                            svc_catalogue.insert(namespace.clone(), vec![netting_service]);
+                        }
+                    },
+                    Err(_) => {}
+                }
+            }
+        }
+        svc_catalogue
     }
 }
