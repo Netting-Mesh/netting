@@ -36,6 +36,12 @@ impl Catalogue {
             .await;
         self.namespaces = namespaces;
     }
+    pub async fn clear_catalogue(&mut self) {
+        self.namespaces.clear();
+        self.pod_catalogue.clear();
+        self.deploy_catalogue.clear();
+        self.service_catalogue.clear();
+    }
     async fn build_pod_catalogue(
         &mut self,
         client: Client,
@@ -65,7 +71,8 @@ impl Catalogue {
     ) -> HashMap<String, Vec<NettingDeployment>> {
         let mut deploy_catalogue: HashMap<String, Vec<NettingDeployment>> = HashMap::new();
         for namespace in namespaces {
-            let deployments = get_deployment_list(client.clone(), namespace.clone()).await;
+            let deployments =
+                get_deployment_list(client.clone(), namespace.clone(), "".to_owned()).await;
             for deploy in deployments.unwrap() {
                 let netting_deploy = get_deployment_details(deploy, client.clone()).await;
                 match deploy_catalogue.get_mut(&(namespace.clone())) {

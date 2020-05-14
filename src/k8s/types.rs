@@ -1,5 +1,6 @@
 #[derive(Debug, Clone)]
 pub struct NettingContainer {
+    pub name: String,
     pub image: String,
     pub ports: Vec<i32>,
 }

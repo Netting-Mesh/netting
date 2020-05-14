@@ -2,13 +2,15 @@ use crate::k8s::pod::{get_pod_details, get_pod_list};
 use crate::k8s::types::*;
 use k8s_openapi::api::apps::v1::{Deployment, ReplicaSet};
 use kube::{
-    api::{Api, ListParams},
+    api::{Api, ListParams, PatchParams, PatchStrategy},
     Client,
 };
+use serde_json::json;
 
 pub async fn get_deployment_list(
     client: Client,
     namespace: String,
+    labels: String,
 ) -> Result<Vec<Deployment>, kube::Error> {
     let deployments: Api<Deployment> = Api::namespaced(client, namespace.as_ref());
     let lp = ListParams::default().labels("");

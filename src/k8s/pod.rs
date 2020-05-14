@@ -16,6 +16,7 @@ pub async fn get_container_details(container: Container) -> NettingContainer {
         None => {}
     }
     return NettingContainer {
+        name: container.name,
         image: container.image.unwrap(),
         ports: ports,
     };

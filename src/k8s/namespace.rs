@@ -9,7 +9,9 @@ pub async fn get_namespaces(client: Client) -> Result<Vec<String>, kube::Error> 
     let lp = ListParams::default().labels("");
     let mut ret = Vec::new();
     for n in namespaces.list(&lp).await? {
-        ret.push(n.metadata.unwrap().name.unwrap());
+        if n.metadata.clone().unwrap().name.unwrap() != "kube-system" {
+            ret.push(n.metadata.unwrap().name.unwrap());
+        }
     }
     Ok(ret)
 }
