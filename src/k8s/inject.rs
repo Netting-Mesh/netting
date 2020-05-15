@@ -39,6 +39,10 @@ async fn build_patch(container: NettingContainer) -> serde_json::value::Value {
                 "containers": [{
                     "name": container.name,
                     "image": container.image,
+                    "ports": [{
+                        "containerPort": container.ports.get(0).unwrap(),
+                        "protocol": "TCP",
+                        }],
                     }],
                 }
             }

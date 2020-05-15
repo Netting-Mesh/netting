@@ -2,10 +2,9 @@ use crate::k8s::pod::{get_pod_details, get_pod_list};
 use crate::k8s::types::*;
 use k8s_openapi::api::apps::v1::{Deployment, ReplicaSet};
 use kube::{
-    api::{Api, ListParams, PatchParams, PatchStrategy},
+    api::{Api, ListParams},
     Client,
 };
-use serde_json::json;
 
 pub async fn get_deployment_list(
     client: Client,
@@ -13,7 +12,7 @@ pub async fn get_deployment_list(
     labels: String,
 ) -> Result<Vec<Deployment>, kube::Error> {
     let deployments: Api<Deployment> = Api::namespaced(client, namespace.as_ref());
-    let lp = ListParams::default().labels("");
+    let lp = ListParams::default().labels(labels.as_ref());
     let mut ret = Vec::new();
     for d in deployments.list(&lp).await? {
         ret.push(d);
