@@ -6,6 +6,8 @@ use kube::{
     Client,
 };
 
+/// Returns a list of Deployment objects within
+/// the given namespace filtered by the labels
 pub async fn get_deployment_list(
     client: Client,
     namespace: String,
@@ -20,6 +22,8 @@ pub async fn get_deployment_list(
     Ok(ret)
 }
 
+/// Returns a list of ReplicaSet objects within
+/// the given namespace filtered by the labels
 pub async fn get_replicaset_list(
     client: Client,
     namespace: String,
@@ -34,30 +38,52 @@ pub async fn get_replicaset_list(
     Ok(ret)
 }
 
-pub async fn get_replicaset_details(replicaset: ReplicaSet, client: Client) -> NettingReplicaSet {
-    let mut labels = String::new();
-    for (key, value) in replicaset.metadata.clone().unwrap().labels.unwrap() {
-        labels.push_str(format!("{}={},", key, value).as_ref());
+/// Returns a wrapper object for the given
+/// ReplicaSet object
+pub async fn get_replicaset_details(
+    replicaset: ReplicaSet,
+    client: Client,
+) -> Result<NettingReplicaSet, kube::Error> {
+    if let Some(metadata) = replicaset.metadata {
+        let mut labels = String::new();
+        if let Some(meta_labels) = metadata.labels {
+            for (key, value) in meta_labels {
+                labels.push_str(format!("{}={},", key, value).as_ref());
+            }
+        }
+        labels.pop(); // Remove trailing comma
+        let pods = get_pod_list(
+            client,
+            metadata
+                .namespace
+                .clone()
+                .expect("Namespace undefined in replicaset metadata"),
+            labels,
+        )
+        .await?;
+        let mut netting_pods = Vec::new();
+        for pod in pods {
+            netting_pods.push(get_pod_details(pod, false).await);
+        }
+        Ok(NettingReplicaSet {
+            name: metadata
+                .name
+                .expect("Name undefined in replicaset metadata"),
+            namespace: metadata
+                .namespace
+                .expect("Namespace undefined in replicaset metadata"),
+            deployment: "".to_owned(),
+            pods: netting_pods,
+        })
+    } else {
+        return Err(kube::Error::Kubeconfig(
+            "Replicaset metadata undefined".to_owned(),
+        ));
     }
-    labels.pop();
-    let pods = get_pod_list(
-        client,
-        replicaset.metadata.clone().unwrap().namespace.unwrap(),
-        labels,
-    )
-    .await;
-    let mut netting_pods = Vec::new();
-    for pod in pods.unwrap() {
-        netting_pods.push(get_pod_details(pod, false).await);
-    }
-    return NettingReplicaSet {
-        name: replicaset.metadata.clone().unwrap().name.unwrap(),
-        namespace: replicaset.metadata.unwrap().namespace.unwrap(),
-        deployment: "".to_owned(),
-        pods: netting_pods,
-    };
 }
 
+/// Returns a wrapper object for the given
+/// Deployment object
 pub async fn get_deployment_details(deploy: Deployment, client: Client) -> NettingDeployment {
     let mut labels = String::new();
     for (key, value) in deploy.spec.clone().unwrap().selector.match_labels.unwrap() {
@@ -72,7 +98,7 @@ pub async fn get_deployment_details(deploy: Deployment, client: Client) -> Netti
     .await;
     let mut netting_replica_sets = Vec::new();
     for rs in replicasets.unwrap() {
-        netting_replica_sets.push(get_replicaset_details(rs, client.clone()).await);
+        netting_replica_sets.push(get_replicaset_details(rs, client.clone()).await.unwrap());
     }
     return NettingDeployment {
         name: deploy.metadata.clone().unwrap().name.unwrap(),
