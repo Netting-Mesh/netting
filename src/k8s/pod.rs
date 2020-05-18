@@ -4,6 +4,7 @@ use kube::{
     api::{Api, ListParams},
     Client,
 };
+use std::collections::HashSet;
 
 pub async fn get_container_details(container: Container) -> NettingContainer {
     let mut ports = Vec::new();
@@ -59,4 +60,14 @@ pub async fn get_pod_list(
         ret.push(p);
     }
     Ok(ret)
+}
+
+pub async fn get_pod_ports(pod: NettingPod) -> HashSet<i32> {
+    let mut ports: HashSet<i32> = HashSet::new();
+    for container in pod.containers {
+        for cp in container.ports {
+            ports.insert(cp);
+        }
+    }
+    ports
 }
