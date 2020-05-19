@@ -50,8 +50,8 @@ pub async fn get_replicaset_details(
             for (key, value) in meta_labels {
                 labels.push_str(format!("{}={},", key, value).as_ref());
             }
+            labels.pop(); // Remove trailing comma
         }
-        labels.pop(); // Remove trailing comma
         let pods = get_pod_list(
             client,
             metadata
@@ -84,25 +84,49 @@ pub async fn get_replicaset_details(
 
 /// Returns a wrapper object for the given
 /// Deployment object
-pub async fn get_deployment_details(deploy: Deployment, client: Client) -> NettingDeployment {
-    let mut labels = String::new();
-    for (key, value) in deploy.spec.clone().unwrap().selector.match_labels.unwrap() {
-        labels.push_str(format!("{}={},", key, value).as_ref());
+pub async fn get_deployment_details(
+    deploy: Deployment,
+    client: Client,
+) -> Result<NettingDeployment, kube::Error> {
+    if let Some(spec) = deploy.spec {
+        let mut labels = String::new();
+        if let Some(spec_labels) = spec.selector.match_labels {
+            for (key, value) in spec_labels {
+                labels.push_str(format!("{}={},", key, value).as_ref());
+            }
+            labels.pop(); // Remove trailing comma
+        }
+        if let Some(metadata) = deploy.metadata {
+            let replicasets = get_replicaset_list(
+                client.clone(),
+                metadata
+                    .namespace
+                    .clone()
+                    .expect("Namespace undefined in deployment metadata"),
+                labels,
+            )
+            .await?;
+            let mut netting_replica_sets = Vec::new();
+            for rs in replicasets {
+                netting_replica_sets.push(get_replicaset_details(rs, client.clone()).await?);
+            }
+            Ok(NettingDeployment {
+                name: metadata
+                    .name
+                    .expect("Name undefined in deployment metadata"),
+                namespace: metadata
+                    .namespace
+                    .expect("Namespace undefined in deployment metadata"),
+                replica_sets: netting_replica_sets,
+            })
+        } else {
+            return Err(kube::Error::Kubeconfig(
+                "Deployment metadata undefined".to_owned(),
+            ));
+        }
+    } else {
+        return Err(kube::Error::Kubeconfig(
+            "Deployment spec undefined".to_owned(),
+        ));
     }
-    labels.pop();
-    let replicasets = get_replicaset_list(
-        client.clone(),
-        deploy.metadata.clone().unwrap().namespace.unwrap(),
-        labels,
-    )
-    .await;
-    let mut netting_replica_sets = Vec::new();
-    for rs in replicasets.unwrap() {
-        netting_replica_sets.push(get_replicaset_details(rs, client.clone()).await.unwrap());
-    }
-    return NettingDeployment {
-        name: deploy.metadata.clone().unwrap().name.unwrap(),
-        namespace: deploy.metadata.clone().unwrap().namespace.unwrap(),
-        replica_sets: netting_replica_sets,
-    };
 }

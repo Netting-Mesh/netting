@@ -6,48 +6,66 @@ use kube::{
 };
 use std::collections::HashSet;
 
-pub async fn get_container_details(container: Container) -> NettingContainer {
+/// Returns a wrapper object for the given
+/// Container object
+pub async fn get_container_details(container: Container) -> Result<NettingContainer, kube::Error> {
     let mut ports = Vec::new();
-    match container.ports {
-        Some(container_ports) => {
-            for cp in container_ports {
-                ports.push(cp.container_port);
+    if let Some(container_ports) = container.ports {
+        for cp in container_ports {
+            ports.push(cp.container_port);
+        }
+    }
+    Ok(NettingContainer {
+        name: container.name,
+        image: container.image.expect("Image undefined in container"),
+        ports: ports,
+    })
+}
+
+/// Returns the container ready status
+pub async fn get_container_status(pod: Pod) -> Result<String, kube::Error> {
+    if let Some(status) = pod.status {
+        if let Some(conditions) = status.conditions {
+            for condition in conditions {
+                if condition.type_ == "Ready" {
+                    return Ok(condition.status);
+                }
             }
         }
-        None => {}
     }
-    return NettingContainer {
-        name: container.name,
-        image: container.image.unwrap(),
-        ports: ports,
-    };
+    return Err(kube::Error::Kubeconfig(
+        "Ready status undefined in container".to_owned(),
+    ));
 }
 
-pub async fn get_container_status(status: ContainerStatus) -> bool {
-    return status.ready;
-}
-
-pub async fn get_pod_details(pod: Pod, exposed: bool) -> NettingPod {
-    let mut containers = Vec::new();
-    for container in pod.spec.unwrap().containers {
-        containers.push(get_container_details(container).await);
-    }
-    let mut status = String::new();
-    for condition in pod.status.unwrap().conditions.unwrap() {
-        if condition.type_ == "Ready" {
-            status = condition.status;
+/// Returns a wrapper object for the given
+/// Pod object
+pub async fn get_pod_details(pod: Pod, exposed: bool) -> Result<NettingPod, kube::Error> {
+    if let Some(spec) = pod.clone().spec {
+        let mut containers = Vec::new();
+        for container in spec.containers {
+            containers.push(get_container_details(container).await?);
         }
+        let status = get_container_status(pod.clone()).await?;
+        if let Some(metadata) = pod.metadata {
+            Ok(NettingPod {
+                name: metadata.name.expect("Name undefined in Pod"),
+                namespace: metadata.namespace.expect("Namespace undefined in Pod"),
+                replicaset: "".to_owned(),
+                containers: containers,
+                status: status,
+                exposed: exposed,
+            })
+        } else {
+            return Err(kube::Error::Kubeconfig("Pod metadata undefined".to_owned()));
+        }
+    } else {
+        return Err(kube::Error::Kubeconfig("Pod spec undefined".to_owned()));
     }
-    return NettingPod {
-        name: pod.metadata.clone().unwrap().name.unwrap(),
-        namespace: pod.metadata.unwrap().namespace.unwrap(),
-        replicaset: "".to_owned(),
-        containers: containers,
-        status: status,
-        exposed: exposed,
-    };
 }
 
+/// Returns a list of Pod objects within
+/// the given namespace filtered by the labels
 pub async fn get_pod_list(
     client: Client,
     namespace: String,
@@ -62,6 +80,7 @@ pub async fn get_pod_list(
     Ok(ret)
 }
 
+/// Returns a set of ports that are used in a pod
 pub async fn get_pod_ports(pod: NettingPod) -> HashSet<i32> {
     let mut ports: HashSet<i32> = HashSet::new();
     for container in pod.containers {

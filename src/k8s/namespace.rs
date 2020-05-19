@@ -9,8 +9,13 @@ pub async fn get_namespaces(client: Client) -> Result<Vec<String>, kube::Error> 
     let lp = ListParams::default().labels("");
     let mut ret = Vec::new();
     for n in namespaces.list(&lp).await? {
-        if n.metadata.clone().unwrap().name.unwrap() != "kube-system" {
-            ret.push(n.metadata.unwrap().name.unwrap());
+        // TODO: Handle else cases with log
+        if let Some(metadata) = n.metadata {
+            if let Some(name) = metadata.name {
+                if name != "kube-system" {
+                    ret.push(name);
+                }
+            }
         }
     }
     Ok(ret)

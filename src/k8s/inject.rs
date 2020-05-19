@@ -8,6 +8,8 @@ use kube::{
 use serde_json::json;
 use std::collections::HashSet;
 
+/// Injects the given container (sideboat) into the
+/// given deployment
 pub async fn inject_container_into_deploy(
     client: Client,
     deploy: NettingDeployment,
@@ -37,6 +39,8 @@ pub async fn inject_container_into_deploy(
     Ok(())
 }
 
+/// Builds the patch json to apply that will inject the sideboat
+/// container & init container
 async fn build_patch(
     container: NettingContainer,
     port_to_redirect: HashSet<i32>,
