@@ -1,5 +1,5 @@
 use crate::k8s::types::*;
-use k8s_openapi::api::core::v1::{Container, ContainerStatus, Pod};
+use k8s_openapi::api::core::v1::{Container, Pod};
 use kube::{
     api::{Api, ListParams},
     Client,

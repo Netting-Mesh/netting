@@ -63,7 +63,7 @@ pub async fn get_replicaset_details(
         .await?;
         let mut netting_pods = Vec::new();
         for pod in pods {
-            netting_pods.push(get_pod_details(pod, false).await);
+            netting_pods.push(get_pod_details(pod, false).await?);
         }
         Ok(NettingReplicaSet {
             name: metadata

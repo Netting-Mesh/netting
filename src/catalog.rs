@@ -51,14 +51,16 @@ impl Catalog {
         for namespace in namespaces {
             let pods = get_pod_list(client.clone(), namespace.clone(), "".to_owned()).await;
             for pod in pods.unwrap() {
-                let netting_pod = get_pod_details(pod, false).await;
-                match pod_catalog.get_mut(&(namespace.clone())) {
-                    Some(pods) => {
-                        pods.push(netting_pod);
-                    }
-                    None => {
-                        pod_catalog.insert(namespace.clone(), vec![netting_pod]);
-                    }
+                match get_pod_details(pod, false).await {
+                    Ok(netting_pod) => match pod_catalog.get_mut(&(namespace.clone())) {
+                        Some(pods) => {
+                            pods.push(netting_pod);
+                        }
+                        None => {
+                            pod_catalog.insert(namespace.clone(), vec![netting_pod]);
+                        }
+                    },
+                    Err(err) => println!("{}", err),
                 }
             }
         }
@@ -74,14 +76,16 @@ impl Catalog {
             let deployments =
                 get_deployment_list(client.clone(), namespace.clone(), "".to_owned()).await;
             for deploy in deployments.unwrap() {
-                let netting_deploy = get_deployment_details(deploy, client.clone()).await;
-                match deploy_catalog.get_mut(&(namespace.clone())) {
-                    Some(deployments) => {
-                        deployments.push(netting_deploy);
-                    }
-                    None => {
-                        deploy_catalog.insert(namespace.clone(), vec![netting_deploy]);
-                    }
+                match get_deployment_details(deploy, client.clone()).await {
+                    Ok(netting_deploy) => match deploy_catalog.get_mut(&(namespace.clone())) {
+                        Some(deployments) => {
+                            deployments.push(netting_deploy);
+                        }
+                        None => {
+                            deploy_catalog.insert(namespace.clone(), vec![netting_deploy]);
+                        }
+                    },
+                    Err(err) => println!("{}", err),
                 }
             }
         }
@@ -106,25 +110,34 @@ impl Catalog {
     ) -> HashMap<String, Vec<NettingService>> {
         let mut svc_catalog: HashMap<String, Vec<NettingService>> = HashMap::new();
         for namespace in namespaces {
-            let services = get_svc_list(client.clone(), namespace.clone()).await;
-            for svc in services.unwrap() {
-                match get_svc_details(svc, client.clone()).await {
-                    Ok(netting_service) => match svc_catalog.get_mut(&(namespace.clone())) {
-                        Some(services) => {
-                            services.push(netting_service.clone());
-                            for pod in netting_service.pods_exposed {
-                                self.update_pod(namespace.clone(), pod).await;
+            match get_svc_list(client.clone(), "".to_owned(), namespace.clone()).await {
+                Ok(services) => {
+                    for svc in services {
+                        match get_svc_details(svc, client.clone()).await {
+                            Ok(netting_service) => {
+                                match svc_catalog.get_mut(&(namespace.clone())) {
+                                    Some(services) => {
+                                        services.push(netting_service.clone());
+                                        for pod in netting_service.pods_exposed {
+                                            self.update_pod(namespace.clone(), pod).await;
+                                        }
+                                    }
+                                    None => {
+                                        svc_catalog.insert(
+                                            namespace.clone(),
+                                            vec![netting_service.clone()],
+                                        );
+                                        for pod in netting_service.pods_exposed {
+                                            self.update_pod(namespace.clone(), pod).await;
+                                        }
+                                    }
+                                }
                             }
+                            Err(_) => {}
                         }
-                        None => {
-                            svc_catalog.insert(namespace.clone(), vec![netting_service.clone()]);
-                            for pod in netting_service.pods_exposed {
-                                self.update_pod(namespace.clone(), pod).await;
-                            }
-                        }
-                    },
-                    Err(_) => {}
+                    }
                 }
+                Err(err) => println!("{}", err),
             }
         }
         svc_catalog
